@@ -1,2 +1,93 @@
 ## 2016 Nov 14 ##
 15.45 - Finish coding, exporting to soursop
+16:14 - First operation in soursop
+16.42 - Preliminary testing
+Sensor 0 Yellow: near cavity
+Sensor 1 Pink: room (near the ceiling)
+Sensor 2 Green: randomly on optical table
+Sensor 3 Blue: near the cold air opening
+16.46 - Set up ready
+16.50 - Time constant experiment: set P to high value to force 10V (try 1)
+16.58 - Move Sensor 1 Pink to a more shaded area (i.e. it was very near the lamp)
+17.03 - Time constant experiment: set P to high value to force 10V (try 2)
+17.05 - Move Sensor 3 Blue to fix it just after the air flow
+17.08 - All the measurements are screwed up because on-off-ing the light cause huge change to the coil temperature. Will restart measurement in 20 mins
+17.17 - Move Sensor 1 Pink to another location
+17.19 - Seems that Sensor 1 Pink needs to have a good air flow to measure the temp of the surrounding. Moved to another location (hanging)
+17.20 - Time constant experiment: set P to high value to force 10V (try 3) - open valve
+17.55 - Time constant experiment: set T to other side to force 0V (try 3) - close valve
+
+## 2016 Nov 15 ##
+10.31 - Exp started. Mainly P locked.
+17.17 - Exp stopped. Changing Sensor 0 Yellow to get the temperature of the vacuum chamber (big reservoir of heat that thermalise with the air inside the enclosure).
+17.24 - Testing new stuff. Set P to force high value of 10 V. 
+17.34 - Manual damper opened to 60 percent open.
+23.03 - Testing Lock with the newfound parameters. ST 22.7 P 120 I 6 RR 300
+
+## 2016 Nov 16 ##
+01.24 - Testing Lock using another parameter.  ST 22.7 P 180 I 150 RR 60
+02.12 - Set the P value to be around half the previous value, as a few times it happens that the high P value brings the airflow valve to a complete stop which will severely warm the system. (and also oscillate eratically) >>  ST 22.7 P 90 I 150 RR 60
+02.37 - Set the refresh rate to be slower @ 150s >>  ST 22.7 P 90 I 150 RR 150
+02.41 - Due to some nonlinearity (see notes), set P and I to be 2x lower >> ST 22.7 P 40 I 80 RR 150
+03.17 - The refresh rate might be too slow for this conf. Set it back to 60s >> ST 22.7 P 40 I 80 RR 60
+14.00 - The program closed unexpectedly due to some unforseen problem (there might be quite a bit of shock to the system).
+14.05 - The refresh rate might be too slow as oscillation is still observed, i.e. P might functions more of like I >> ST 22.7 P 40 I 80 RR 10
+14.13 - The value of I might be too low to cause damping on the shock, make it 2x higher >> ST 22.7 P 40 I 80 RR 10
+14.21 - We fiddled with Sensor 3 Blue to correct the position to a better place.
+14.33 - For some uunknown reason (probably because Chi Huan is in the room), can't set the temp to low value. Set to 22.9 >> ST 22.9 P 40 I 80 RR 10
+14.47 - The room is warming up. Set to 22.9 >> ST 22.9 P 40 I 80 RR 10
+17.25 - Locking fail as the cold air source is not effective. Stop the locking.
+17.49 - Finish putting the cold air guidance.
+17.55 - Looking at the response of off airflow (comparing Sensor 3 Blue with the previous cases)
+18.10 - Testing the new lock. Set the temp to 23.2 >> ST 23.2 P 40 I 80 RR 10
+19.00 - SHITTTT. DELETED SOME FRESH DATA...
+19.15 - Change I to a higher value (just noticed that the change @ 14.13 was not implemented) >> ST 23.2 P 40 I 150 RR 10
+19.20 - Still observe oscillation >> set P to a lower value (2 times lower) >> >> ST 23.2 P 20 I 150 RR 10
+19.31 - Testing response to shocks
+19.48 - Seems that the I value is still quite small to damp out stuffs. Set to 2 times higher >> ST 23.2 P 20 I 300 RR 10
+21.20 - The lock should be working properly. Just probably need a bit of faith
+
+## 2016 Nov 17 ##
+10.30 - We noticed some oscillations over the night. Set the P value lower. This may be because of different responses of the system for different airflow/temp/output volt, i.e. now the system respond more aggressively >> ST 23.2 P 10 I 300 RR 10
+15.00 - We change the position of the Sensor 0 Yellow to the glass cuvette, as we noticed that the temperature of the cavity follows the temperature of the air/glass (from Sensor 3 Green) more than the temperature of the vacuum chamber.
+15.09 - Testing the lock on the new location
+15.15 - We noticed that the heat insulation to the hot air from the coil is not very good. Trying different tapes
+15.30 - Testing the new tape (masking tape ??)
+16.19 - Test okay-ish. The new insulating layer (styrofoam) acts as a low pass. But then, we change the I and RR value to be not so aggresive (as sometimes if the air flow is too large, it will undeliberately heat the glass cuvette >> ST 24.6 P 5 I 80 RR 30
+17.31 - We decided to measure the temperature of the vertical breadboard to get a stable reference of the temperature of the room. Setting back PID value to this morning one. >> ST 23.1 P 10 I 300 RR 10
+17.35 - Testing the lock for the new location 
+19.05 - Putting more cellotape on the Sensor 0 Yellow to secure it more. Testing lock again
+19.50 - Probably the I is too large. Set to >> ST 23.1 P 10 I 150 RR 10
+20.27 - Feedback a bit slow. Increase P to 2 times >> ST 23.1 P 20 I 150 RR 10
+20.30 - Wrong move... Decrease P back and decrease I >> ST 23.1 P 10 I 100 RR 10
+20.50 - The feedback might be a bit slow. Decrease I 20% >> ST 23.1 P 10 I 80 RR 10
+
+## 2016 Nov 18 ##
+13:46 - We noticed that the P value might be too large to create oscillation. Set to 2x lower >> ST 23.1 P 5 I 80 RR 10. We might also want to set the set temp lower as the temperature of the air is colder at night >> probably set to 22.9 C 
+13.58 - The I might be too huge. Set to >> ST 23.1 P 5 I 50 RR 10
+14.00 - We noticed that there is some influence from the hot air. Change to location of Sensor 0 Yellow.
+14.05 - Modif finished. Change to >> ST 23.05 P 10 I 200 RR 10. Running good
+23.11 - Unlock the temperature to see how bad it goes over the weekend
+23.18 - MOVE THE OLD TEMP_LOG TO THE HISTORY FOLDER. GENERATING NEW TEMP_LOG FILE FOR TEMP...
+
+## 2016 Nov 21 ##
+09.15 - Move the previous temp_log file to the history folder (no lock case)
+09.16 - Lock the temperature again to >> ST 23.00 P 10 I 200 RR 10. Wait till the temperature is stabilised.
+
+## 2016 Nov 24 ##
+16.25 - Restarted computer a few hours earlier. Just remembered that need to on the reporter. Oops...  >> ST 23.00 P 10 I 200 RR 10
+
+## 2016 Nov 24 ##
+11.15 - WARNINGGG!!!!! DO NOT TRY TO SET THE LOCK TO A TEMPERATURE QUITE FAR FROM THE CURRENT TEMPERATURE. THE LOCK WILL OSCILLATE WILDLY, AS THE I VALUE TAKES QUITE LONG TO RESPOND. USING A LOWER I VALUE >> ST 23.00 P 10 I 100 RR 10
+ALSO... PLEASE NEXT TIME IF THE DIFFERENCE IN TEMP IS HIGH, KEEP AT SOME OFFSET VOLTAGE FOR SOME POINT, AND DON'T LOCK TO IT. DON'T LET THE I VALUE TO ACCUMULATE... THIS PROGRAM IS QUITE STUPID...
+11.30 - Poking some new holes because we did something with the setup yesterday. It seems that the direction of the cold air was a bit upwards cause we strapped it upwards, and this might cause the cold air to escape immediately out. Now we put the direction a bit downwards
+11.50 - Locking it again with a smaller I >> ST 23.00 P 10 I 100 RR 10. The response is quite slow, and because we figured out the original problem, we set the I to be higher, but not as high as original  >> ST 23.00 P 10 I 150 RR 10
+
+## 2017 Jan 11 ##
+HAPPY NEW YEAR. DESPITE NOT CREATING PROBLEMS FOR ONE MONTH++ ALREADY, THE COMPUTER RESTARTED SOME TIME DURING THE NEW YEAR. Change the set point temperature to 23.2 >> ST 23.20 P 10 I 100 RR 10
+
+## 2017 Feb 7 ##
+After the thing has been sort of working in one month, the temperature of the air coller won't cooperate. It works very hard at set temperature of 23.00 C. Setting the set temperature higher at around 23.15 C >> ST 23.15 P 10 I 100 RR 10
+Set to 23.2 C >> ST 23.15 P 10 I 100 RR 10
+
+

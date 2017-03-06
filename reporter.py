@@ -1,6 +1,7 @@
 '''
-WEATHER REPORT v1.00
+WEATHER REPORT v1.01
 This program will report the temperature on 4 different locations, and log them. Complete with the locking algorithm to stabilise the temperature
+v 1.01 Added functionality to call telegram for help also for some time reporting
 
 Author: Adrian Nugraha Utama
 Nov 2016
@@ -14,7 +15,17 @@ import threading
 import Queue
 import zmq
 import numpy as np
+import subprocess as sp
 from UAIOtemp import UAIOtemp_comm
+import datetime
+
+# For weather reporting
+WR_when = [datetime.time(07,00,0,0), datetime.time(12,00,0,0), datetime.time(15,00,0,0), datetime.time(18,00,0,0), datetime.time(22,00,0,0)]
+WR_what = ['Good morning everyone, hope you had a nice sleep. Below is the report on the temperature this morning. Today will be a very good day, I believe !!!', 'Lunch time everybody!!! Here is the report of the temperature.','Coffee break everybody!!! While you are having coffee, here is the report on the temperature.', 'It is time to go home. Hope you had a great day. Here is the temperature now', 'Good night, sleep tight, and see you tomorrow!!! Btw, the current temperature is as follows']
+WR_pointer = 0
+
+# Telegram Group
+USER = 'Cavity'
 
 # SOME PARAMETERS:
 GUI_RATE    = 100   # 100 ms
@@ -33,7 +44,7 @@ def insanity_check(number, min_value, max_value):
         return max_value
     if number < min_value:
         return min_value
-    else: 
+    else:
         return number
 
 class GuiPart:
@@ -41,23 +52,23 @@ class GuiPart:
         self.master = master
         self.queue = queue
 
-        # Initialise variables 
+        # Initialise variables
         self.temperature_disp = [0, 0, 0, 0]    # To be attached to temperature
         self.temperature_value = [20, 20, 20, 20] # To hold the values for the temperatures
 
         self.entry = [0, 0, 0, 0]   # To be attached to the set_value
-        self.set_value = [20, 0, 0, 10]   # Set value for parameters 
+        self.set_value = [23.2, 10, 100, 10]   # Set value for parameters
         self.rough_step = [0.3, 1, 5, 10]
         self.fine_step = [0.01, 0.1, 0.5, 1]
         self.max_set_value= [30, 1000, 1000, 1000]
         self.min_set_value = [15, 0, 0, 1]
         self.set_value_dict = [u" \u00b0C", " V/K", " mV/Ks", " s"]
 
-        self.outvolt_value = 0
+        self.outvolt_value = 5
 
         self.params_label = ["Delta Avg:", "Delta Acc:", "P Adj:", "I Adj:"]
         self.params_disp = [0, 0, 0, 0]     # To be attached to params_value
-        self.params_value = [0, 0, 0, 0]
+        self.params_value = [0, 50, 0, 5]
         self.params_units = ["K   ", "Ks   ", "V   ", "V"]
 
         # Set up the GUI
@@ -65,7 +76,7 @@ class GuiPart:
         # LEFT FRAME
         self.frame1 = Tkinter.Frame(self.master)
         Tkinter.Label(self.frame1, text='Temperature Reading', font=("Helvetica", 16)).grid(row=1, padx=5, pady=5, column=1, columnspan= 10)
-        
+
         Tkinter.Label(self.frame1, text='Sensor 0:', font=("Helvetica", 16), fg='yellow3').grid(row=2, padx=5, pady=5, column=1, sticky=Tkinter.W)
         Tkinter.Label(self.frame1, text='Sensor 1:', font=("Helvetica", 16), fg='deeppink').grid(row=3, padx=5, pady=5, column=1, sticky=Tkinter.W)
         Tkinter.Label(self.frame1, text='Sensor 2:', font=("Helvetica", 16), fg='green').grid(row=4, padx=5, pady=5, column=1, sticky=Tkinter.W)
@@ -118,14 +129,14 @@ class GuiPart:
     def buttonPressed(self, channel, button_type):
         # Performing the stuffs for Channel 1 to 6 (Voltage)
         if button_type == 1:
-            self.set_value[channel] -= self.rough_step[channel] 
+            self.set_value[channel] -= self.rough_step[channel]
         elif button_type == 2:
             self.set_value[channel] -= self.fine_step[channel]
         elif button_type == 3:
             self.set_value[channel] += self.fine_step[channel]
         elif button_type == 4:
             self.set_value[channel] += self.rough_step[channel]
-        
+
         # Insanity check the values
         self.set_value[channel] = insanity_check(self.set_value[channel], self.min_set_value[channel], self.max_set_value[channel])
 
@@ -176,6 +187,9 @@ class ThreadedClient:
         self.thread1 = threading.Thread(target=self.workerThread1_UAIO)
         self.thread1.start(  )
 
+        # Define the status of the lock
+        self.status = 0  # 0 - not started, 1 - started, 2 - dangerous
+
         # Start the periodic call in the GUI to check if the queue contains
         # anything
         self.periodicCall(  )
@@ -183,7 +197,7 @@ class ThreadedClient:
     def initialiseParameters(self):
         # Communiate with the analog powermeter
         self.temp_comm = UAIOtemp_comm(UAIOtemp_addr)
-       
+
         # Create a variable to store the values emitted from the analog powermeter
         self.temperature_value = [20, 20, 20, 20]
 
@@ -191,7 +205,7 @@ class ThreadedClient:
         self.entry = [0, 0, 0, 0]   # Set temp, P value, I value, Refresh rate
 
         # Create the list of the params values
-        self.params_value = [0, 0, 0, 0]
+        self.params_value = [0, 50, 0, 5]
 
         # Create the variable to store the outvolt
         self.outvolt = 0
@@ -216,8 +230,13 @@ class ThreadedClient:
         for i in range(4):
             self.gui.temperature_disp[i]['text'] = '%.3f'%round(self.gui.temperature_value[i],3)+ u" \u00b0C"
 
-        # Dealing with lock
+        # Dealing with status and lock
         if self.gui.set_lock.get() == 1:    # If lock is set
+            self.status = 1
+        else:
+            self.status = 0
+
+        if self.status == 1:
             self.process_lock()
 
         # Shutting down the program
@@ -243,7 +262,7 @@ class ThreadedClient:
             self.params_value[2] = self.params_value[0] * self.entry[1]
             self.params_value[3] = self.params_value[1] * self.entry[2] / 1000  # self.entry[2] is in mV/Ks
             outvolt = self.params_value[2] + self.params_value[3]
-            
+
             # Sanitise the output voltage
             outvolt = insanity_check(outvolt, MIN_OUTVOLT, MAX_OUTVOLT)
             self.outvolt = round(outvolt,3)
@@ -265,8 +284,42 @@ class ThreadedClient:
             with open("control_log", "a") as myfile:
                 myfile.write(now1 + ' ' + now2 + ' ' + entry0 + ' ' + entry1 + ' ' + entry2 + ' ' + entry3 + ' ' + param0 + ' ' + param1 + ' ' + param2 + ' ' + param3 + ' ' + out + '\n' )
 
+            # Cancel the lock (dangerous) if some of the params get crazy
+            if outvolt < 2 or outvolt > 9:
+                message = '### Message from Shiva and Ifrit. Looks that the temperature is playing prank on us. If possible please handle it ASAP!!!'
+                sp.call(['./telegram_report.sh',USER,message])
+                message = 'PARAMS:' + ' ' + now1 + ' ' + now2 + ' ' + entry0 + ' ' + entry1 + ' ' + entry2 + ' ' + entry3 + ' ' + param0 + ' ' + param1 + ' ' + param2 + ' ' + param3 + ' ' + out
+                sp.call(['./telegram_report.sh',USER,message])
+                message = 'UNLOCKING (to prevent further problems) ###'
+                sp.call(['./telegram_report.sh',USER,message])
+                self.gui.set_lock.set(0)
+                status = 2
+
             # Reset the counter
             self.counter_ref = 0
+
+            # Report stuffs via telegram
+            global WR_pointer
+            WR_now = datetime.datetime.now().time()
+            if WR_pointer != -1:
+                if WR_now > WR_when[WR_pointer]:
+                    print "Sending messages"
+                    message = '### Message from Shiva and Ifrit ###'
+                    sp.call(['./telegram_report.sh',USER,message])
+                    message = WR_what[WR_pointer]
+                    sp.call(['./telegram_report.sh',USER,message])
+                    message = 'Temperatures around the chamber is ' + self.gui.temperature_disp[0]['text'] + ' ' + self.gui.temperature_disp[1]['text'] + ' ' + self.gui.temperature_disp[2]['text'] + ' ' + self.gui.temperature_disp[3]['text'] + ' , and output voltage is ' + out
+                    sp.call(['./telegram_report.sh',USER,message])
+                    WR_pointer +=1
+                    if WR_pointer > len(WR_when) - 1:
+                        WR_pointer = -1
+                        print "Wait until the the counter reset the next day"
+                    else:
+                        print "Next message will be on " + str(WR_when[WR_pointer])
+            else:
+                if WR_now < datetime.time(00,05,0,0):
+                    print "Hello the next day"
+                    WR_pointer = 0
 
         # Update the display of params and outvolt value
         self.gui.params_value = self.params_value
@@ -275,10 +328,12 @@ class ThreadedClient:
         self.gui.outvolt_value = self.outvolt
         self.gui.outvolt_disp['text'] = '%.3f'%self.outvolt + " V"
 
+
+
     def workerThread1_UAIO(self):
         """
         This is another thread that deals with serial communication. This runs independently from the main thread,
-        but communicates the necessary variables and parameters  
+        but communicates the necessary variables and parameters
         """
         while self.running:
             try:
@@ -297,7 +352,7 @@ class ThreadedClient:
                 temp_array = []
                 for value in value_array:
                     R2 = R1 * float(value) / (Vpu - float(value))
-                    temp_array.append(1/( 1/(T0-C2K) + np.log(R2/R0)/B ) + C2K) 
+                    temp_array.append(1/( 1/(T0-C2K) + np.log(R2/R0)/B ) + C2K)
                 self.temperature_value = temp_array # MODIFY THE MAIN THREAD
 
                 # TO APPEND TO TEMP_LOG FILES
@@ -335,13 +390,13 @@ class ThreadedClient:
 
 class VoltageHandler:
     """
-    Handles the set voltage and give appropriate commands 
+    Handles the set voltage and give appropriate commands
     """
     def __init__(self, arg_max_step, arg_channel):
         """
         Initialise the object and giving it initial value
         """
-        self.set_voltage = 0
+        self.set_voltage = 5
         self.output_voltage = 0
         self.max_step = arg_max_step
         self.channel = arg_channel
@@ -368,7 +423,10 @@ class VoltageHandler:
 ''' Main program goes here '''
 
 root = Tkinter.Tk(  )
-root.title("Weather Report v1.00")
+root.title("Weather Report v1.01 With Telegram")
+
+img = Tkinter.PhotoImage(file='icon.png')
+root.tk.call('wm', 'iconphoto', root._w, img)
 
 client = ThreadedClient(root)
 root.mainloop(  )
